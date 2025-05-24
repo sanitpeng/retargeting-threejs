@@ -113,24 +113,104 @@ class App {
         if(urlParams.has('controls')) {
             showControls = !(urlParams.get('controls') === "false");
         }
-        let modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/Woman/Woman.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+        // let modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/Woman/Woman.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+        let modelToLoad = ['../3dmodel/Woman.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
         this.loadAvatar(modelToLoad[0], modelToLoad[1], "Woman", "glb", ()=>{
-            this.changeSourceAvatar( "Woman" );                         
-        });
-       
-        modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/ReadyEva/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
-        this.loadAvatar(modelToLoad[0], modelToLoad[1], "ReadyEva", "glb", ()=>{
-            this.gui = new Gui( this ); 
-            this.changeAvatar( "ReadyEva" );
-            this.animate();
-            document.getElementById("loading").style.display = "none";
-            this.isAppReady = true;
-                    
+            this.changeSourceAvatar( "Woman" );             
+            // modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/ReadyEva/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            modelToLoad = ['../3dmodel/boy/mixamo_41_Dancing.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            
+            this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_41_Dancing", "fbx", ()=>{
+                this.gui = new Gui( this ); 
+                this.changeAvatar( "mixamo_41_Dancing" );
+                this.animate();
+                document.getElementById("loading").style.display = "none";
+                this.isAppReady = true;
+                        
+            });
+
         });
 
         window.addEventListener( 'resize', this.onWindowResize.bind(this) );
     }
 
+    normalizeSkeletonRoot(skeleton) {
+        if (!skeleton || !skeleton.bones || skeleton.bones.length === 0) {
+            console.warn("Invalid skeleton");
+            return skeleton;
+        }
+    
+        // 1. 找出真正的 root bones（没有 isBone 父节点的）
+        const rootBones = skeleton.bones.filter(bone => {
+            let p = bone.parent;
+            while (p) {
+                if (p.isBone) return false;
+                p = p.parent;
+            }
+            return true;
+        });
+    
+        if (rootBones.length === 0) {
+            console.warn("No root bone found in skeleton.");
+            return skeleton;
+        }
+    
+        // 2. 遍历构建拓扑顺序骨骼列表（从根开始深度优先）
+        const visited = new Set();
+        const newBones = [];
+        const newInverses = [];
+    
+        function traverse(bone) {
+            if (visited.has(bone)) return;
+            visited.add(bone);
+            newBones.push(bone);
+            const index = skeleton.bones.indexOf(bone);
+            if (index !== -1) {
+                newInverses.push(skeleton.boneInverses[index]);
+            } else {
+                // fallback: identity matrix
+                newInverses.push(new THREE.Matrix4());
+            }
+    
+            for (let i = 0; i < bone.children.length; i++) {
+                const child = bone.children[i];
+                if (child.isBone) {
+                    traverse(child);
+                }
+            }
+        }
+    
+        // 多根的情况，也都加入
+        for (const root of rootBones) {
+            traverse(root);
+        }
+    
+        // 3. 构造新的 Skeleton
+        const newSkeleton = new THREE.Skeleton(newBones, newInverses);
+        return newSkeleton;
+    }
+    
+    remapSkinIndices(oldSkeleton, newSkeleton, geometry) {
+        // 构建名字 -> index 映射表
+        const oldBoneMap = {};
+        oldSkeleton.bones.forEach((bone, i) => oldBoneMap[bone.name] = i);
+        const newBoneMap = {};
+        newSkeleton.bones.forEach((bone, i) => newBoneMap[bone.name] = i);
+    
+        // 建立 oldIndex -> newIndex 的映射
+        const indexMap = oldSkeleton.bones.map(bone => newBoneMap[bone.name]);
+    
+        // 替换 geometry.skinIndex 数组
+        const skinIndex = geometry.attributes.skinIndex;
+        const array = skinIndex.array;
+        for (let i = 0; i < array.length; i++) {
+            array[i] = indexMap[array[i]] ?? 0; // fallback 到 0
+        }
+    
+        skinIndex.needsUpdate = true;
+    }
+    
     animate() {
 
         requestAnimationFrame( this.animate.bind(this) );
@@ -275,7 +355,14 @@ class App {
                     } );
                 }else{
                     model.traverse( (object) => {
-                        if ( object.isMesh || object.isSkinnedMesh ) {                        
+                        if ( object.isMesh || object.isSkinnedMesh ) {       
+                                                        
+
+                            let newSkeleton = this.normalizeSkeletonRoot(object.skeleton); // 👈 在这里转换
+                            this.remapSkinIndices(object.skeleton, newSkeleton, object.geometry);
+                            object.bind(newSkeleton);
+                            
+
                             object.material.side = THREE.FrontSide;
                             object.frustumCulled = false;
                             object.castShadow = true;
