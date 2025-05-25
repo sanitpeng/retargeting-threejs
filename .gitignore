@@ -1,2 +1,5 @@
 .vscode/
 typings/*
+.DS_Store
+*.swp
+3dmodel

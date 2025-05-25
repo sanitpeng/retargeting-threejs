@@ -119,11 +119,14 @@ class App {
             this.changeSourceAvatar( "Woman" );             
             // modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/ReadyEva/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             // modelToLoad = ['../3dmodel/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
-            modelToLoad = ['../3dmodel/boy/mixamo_41_Dancing.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/boy/mixamo_41_Dancing.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/boy/boy_skin_rigged.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            modelToLoad = ['../3dmodel/tira/mixamo_tira_skin.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             
-            this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_41_Dancing", "fbx", ()=>{
+            
+            this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_tira_skin", "fbx", ()=>{
                 this.gui = new Gui( this ); 
-                this.changeAvatar( "mixamo_41_Dancing" );
+                this.changeAvatar( "mixamo_tira_skin" );
                 this.animate();
                 document.getElementById("loading").style.display = "none";
                 this.isAppReady = true;
@@ -192,6 +195,8 @@ class App {
     }
     
     remapSkinIndices(oldSkeleton, newSkeleton, geometry) {
+        console.log("oldSkeleton", oldSkeleton);
+        console.log("newSkeleton", newSkeleton);
         // 构建名字 -> index 映射表
         const oldBoneMap = {};
         oldSkeleton.bones.forEach((bone, i) => oldBoneMap[bone.name] = i);
@@ -359,8 +364,10 @@ class App {
                                                         
 
                             let newSkeleton = this.normalizeSkeletonRoot(object.skeleton); // 👈 在这里转换
-                            this.remapSkinIndices(object.skeleton, newSkeleton, object.geometry);
-                            object.bind(newSkeleton);
+                            if (newSkeleton !== undefined) {
+                                this.remapSkinIndices(object.skeleton, newSkeleton, object.geometry);
+                                object.bind(newSkeleton);
+                            }
                             
 
                             object.material.side = THREE.FrontSide;
