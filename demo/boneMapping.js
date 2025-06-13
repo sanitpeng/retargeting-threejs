@@ -171,6 +171,7 @@ class BoneMappingScene {
         cloned.bones = bones;
         cloned.pose();
         for(let i = 1; i < cloned.bones.length; i++) {
+            if (cloned.bones[i].name == "neutral_bone") continue; // ignore neutral bones，用来定位做参考的
             const dist = cloned.bones[i].getWorldPosition(new THREE.Vector3()).distanceTo(cloned.bones[i].parent.getWorldPosition(new THREE.Vector3()))
             totalLenght += dist;
         }

@@ -245,13 +245,19 @@ class AnimationRetargeting {
         let srcLength = 0;        
         // Compute source sum of bone lengths
         for(let i = 1; i < this.srcBindPose.bones.length; i++) {
+            if (this.trgBindPose.bones[i].name == "neutral_bone") continue; // ignore neutral bones，用来定位做参考的
             let dist = this.srcBindPose.bones[i].getWorldPosition(new THREE.Vector3()).distanceTo(this.srcBindPose.bones[i].parent.getWorldPosition(new THREE.Vector3()))
             srcLength += dist;
         }
 
         let trgLength = 0;
         // Compute target sum of bone lengths
+        console.log("trgBond", this.trgBindPose.bones);
         for(let i = 1; i < this.trgBindPose.bones.length; i++) {
+            console.log("trgBond", this.trgBindPose.bones[i].name, i);
+
+            if (this.trgBindPose.bones[i].name == "neutral_bone") continue; // ignore neutral bones，用来定位做参考的
+
             let dist = this.trgBindPose.bones[i].getWorldPosition(new THREE.Vector3()).distanceTo(this.trgBindPose.bones[i].parent.getWorldPosition(new THREE.Vector3()))
             trgLength += dist;
         }        
@@ -505,6 +511,7 @@ function forceBindPoseQuats( skeleton, skipRoot = false ){
 function applyTPose(skeleton, map) {
      
     if(!map) {
+        console.log("map = null skeleton =", skeleton);
         map = computeAutoBoneMap(skeleton);
         map = map.nameMap;
     }
@@ -516,6 +523,8 @@ function applyTPose(skeleton, map) {
     }
     
     let resultSkeleton = skeleton;
+    console.log("skeleton =", skeleton);
+    console.log("map =", map);
     // Check if spine is extended 
     let spineBase = resultSkeleton.getBoneByName(map.BelowStomach); // spine
     let spineChild = spineBase.children[0];
@@ -860,30 +869,145 @@ function alignBoneToAxis(bone, axis, child) {
  * @param {THREE.Skeleton} srcSkeleton 
  * @returns {object} { idxMap: [], nameMape: {} }
  */
-function computeAutoBoneMap( skeleton ){
+// function computeAutoBoneMap( skeleton ){
+//     const auxBoneMap = Object.keys(AnimationRetargeting.boneMap);
+//     let bones = skeleton.bones;
+//     let result = {
+//         idxMap: new Int16Array( auxBoneMap.length ),
+//         nameMap: {} 
+//     };
+
+//     result.idxMap.fill( -1 ); // default to no map;
+
+//     let mode = detectSkeletonType(skeleton);
+//     console.log("Detected skeleton type:", mode);
+
+//     // automap
+//     for(let i = 0; i < auxBoneMap.length; i++) {
+//         const auxName = auxBoneMap[i];
+//         for( let j = 0; j < bones.length; ++j ){
+//             let name = bones[j].name;
+//             if ( typeof( name ) !== "string" ){ continue; }
+//             name = name.toLowerCase().replace( "mixamorig", "" ).replace( /[`~!@#$%^&*()_|+\-=?;:'"<>\{\}\\\/]/gi, "" );
+//             if ( name.length < 1 ){ continue; }
+//             if(name.toLowerCase().includes(auxName.toLocaleLowerCase()) || name.toLowerCase().includes(AnimationRetargeting.boneMap[auxName].toLocaleLowerCase())) {
+//                 result.nameMap[auxName] = bones[j].name;
+//                 result.idxMap[i] = j;
+//                 break;
+//             }
+//         }                
+//     }
+//     return result;
+// }
+
+
+function computeAutoBoneMap(skeleton) {
     const auxBoneMap = Object.keys(AnimationRetargeting.boneMap);
-    let bones = skeleton.bones;
+    const bones = skeleton.bones;
+
     let result = {
-        idxMap: new Int16Array( auxBoneMap.length ),
-        nameMap: {} 
+        idxMap: new Int16Array(auxBoneMap.length),
+        nameMap: {}
     };
 
-    result.idxMap.fill( -1 ); // default to no map;
-    // automap
-    for(let i = 0; i < auxBoneMap.length; i++) {
+    result.idxMap.fill(-1); // default to no map
+
+    let mode = detectSkeletonType(skeleton);
+
+    for (let i = 0; i < auxBoneMap.length; i++) {
         const auxName = auxBoneMap[i];
-        for( let j = 0; j < bones.length; ++j ){
-            let name = bones[j].name;
-            if ( typeof( name ) !== "string" ){ continue; }
-            name = name.toLowerCase().replace( "mixamorig", "" ).replace( /[`~!@#$%^&*()_|+\-=?;:'"<>\{\}\\\/]/gi, "" );
-            if ( name.length < 1 ){ continue; }
-            if(name.toLowerCase().includes(auxName.toLocaleLowerCase()) || name.toLowerCase().includes(AnimationRetargeting.boneMap[auxName].toLocaleLowerCase())) {
-                result.nameMap[auxName] = bones[j].name;
+        const targetName = AnimationRetargeting.boneMap[auxName];
+
+        for (let j = 0; j < bones.length; ++j) {
+            const originalName = bones[j].name;
+            if (typeof originalName !== "string") continue;
+
+            let matched = false;
+            if (mode === "mixamo") {
+                matched = matchMixamoBone(auxName, targetName, originalName);
+            } else if (mode === "vroid") {
+                matched = matchVRoidBone(auxName, targetName, originalName);
+            }
+
+            if (matched) {
+                result.nameMap[auxName] = originalName;
                 result.idxMap[i] = j;
                 break;
             }
-        }                
+        }
     }
+
     return result;
 }
+
+function matchMixamoBone(auxName, targetName, boneName) {
+    let name = boneName.toLowerCase()
+        .replace("mixamorig", "")
+        .replace(/[`~!@#$%^&*()_|+\-=?;:'"<>\{\}\\\/]/gi, "");
+
+    if (name.length < 1) return false;
+
+    return (
+        name.includes(auxName.toLowerCase()) ||
+        name.includes(targetName.toLowerCase())
+    );
+}
+
+function matchVRoidBone(auxName, targetName, originalBoneName) {
+    const vroidToStandardBoneMap = {
+        J_Bip_C_Hips: "hips",
+        J_Bip_C_Spine: "spine",
+        J_Bip_C_Chest: "spine1",
+        J_Bip_C_UpperChest: "spine2",
+        J_Bip_C_Neck: "neck",
+        J_Bip_C_Head: "head",
+
+        J_Bip_L_Shoulder: "leftshoulder",
+        J_Bip_L_UpperArm: "leftarm",
+        J_Bip_L_LowerArm: "leftforearm",
+        J_Bip_L_Hand: "lefthand",
+
+        J_Bip_R_Shoulder: "rightshoulder",
+        J_Bip_R_UpperArm: "rightarm",
+        J_Bip_R_LowerArm: "rightforearm",
+        J_Bip_R_Hand: "righthand",
+
+        J_Bip_L_UpperLeg: "leftupleg",
+        J_Bip_L_LowerLeg: "leftleg",
+        J_Bip_L_Foot: "leftfoot",
+
+        J_Bip_R_UpperLeg: "rightupleg",
+        J_Bip_R_LowerLeg: "rightleg",
+        J_Bip_R_Foot: "rightfoot",
+    };
+
+    const mappedStandard = vroidToStandardBoneMap[originalBoneName];
+    return mappedStandard && mappedStandard.toLowerCase() === targetName.toLowerCase();
+}
+
+function detectSkeletonType(skeleton) {
+    let mixamoCount = 0;
+    let vroidCount = 0;
+
+    for (let bone of skeleton.bones) {
+        const name = bone.name || "";
+
+        if (name.toLowerCase().includes("mixamorig")) {
+            mixamoCount++;
+        }
+
+        if (name.startsWith("J_Bip_")) {
+            vroidCount++;
+        }
+    }
+
+    if (vroidCount > mixamoCount && vroidCount > 0) {
+        return "vroid";
+    } else if (mixamoCount > 0) {
+        return "mixamo";
+    } else {
+        return "mixamo"; // Default to Mixamo if no clear type is detected
+    }
+}
+
 export { AnimationRetargeting, findIndexOfBone, findIndexOfBoneByName, forceBindPoseQuats, applyTPose, computeAutoBoneMap };

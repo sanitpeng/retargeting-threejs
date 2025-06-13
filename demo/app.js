@@ -115,16 +115,23 @@ class App {
         }
         // let modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/Woman/Woman.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
         let modelToLoad = ['../3dmodel/Woman.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+        // let modelToLoad = ['../3dmodel/Dancer.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];        
         this.loadAvatar(modelToLoad[0], modelToLoad[1], "Woman", "glb", ()=>{
             this.changeSourceAvatar( "Woman" );             
             // modelToLoad = ['https://resources.gti.upf.edu/3Dcharacters/ReadyEva/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             // modelToLoad = ['../3dmodel/ReadyEva.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             // modelToLoad = ['../3dmodel/boy/mixamo_41_Dancing.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             // modelToLoad = ['../3dmodel/boy/boy_skin_rigged.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
-            modelToLoad = ['../3dmodel/tira/mixamo_tira_skin.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/boy/debug/boy_unirig_vroid_skin_nor_d90e1.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            modelToLoad = ['../3dmodel/tira_unirig/rigged.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/boy/boy_skin_rigged.glb', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            
+            // modelToLoad = ['../3dmodel/tira/mixamo_tira_skin.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
+            // modelToLoad = ['../3dmodel/boy/boy_unirig_mixamo.fbx', (new THREE.Quaternion()).setFromAxisAngle( new THREE.Vector3(1,0,0), 0 ) ];
             
             
-            this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_tira_skin", "fbx", ()=>{
+            // this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_tira_skin", "fbx", ()=>{
+            this.loadAvatar(modelToLoad[0], modelToLoad[1], "mixamo_tira_skin", "glb", ()=>{                
                 this.gui = new Gui( this ); 
                 this.changeAvatar( "mixamo_tira_skin" );
                 this.animate();
